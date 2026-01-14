@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MexDose - Dosage Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=text] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex flex-col">
+    <main class="flex-grow flex flex-col items-center justify-center px-4 py-8">
+        <div class="w-full max-w-4xl">
+            <header class="text-center mb-10">
+                <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">MexDose</h1>
+                <p class="text-slate-600">Dosage Converter</p>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6">
+                    <!-- Concentration Input -->
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="concentration"
+                            placeholder="0"
+                            class="w-24 md:w-28 px-4 py-3 text-xl text-center border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            autocomplete="off"
+                        >
+                        <span class="text-slate-700 font-medium whitespace-nowrap">mg/mL</span>
+                    </div>
+
+                    <!-- Multiply Symbol -->
+                    <span class="text-2xl text-slate-400 hidden md:block">&times;</span>
+
+                    <!-- Rate Input -->
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="rate"
+                            placeholder="0"
+                            class="w-24 md:w-28 px-4 py-3 text-xl text-center border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+                            autocomplete="off"
+                        >
+                        <span class="text-slate-700 font-medium whitespace-nowrap">mL/hr</span>
+                    </div>
+
+                    <!-- Arrow -->
+                    <span class="text-2xl text-slate-400">
+                        <svg class="w-6 h-6 rotate-90 md:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </span>
+
+                    <!-- Result Output -->
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="result"
+                            placeholder="—"
+                            readonly
+                            class="w-28 md:w-32 px-4 py-3 text-xl text-center bg-slate-100 border-2 border-slate-300 rounded-lg text-slate-800 font-semibold cursor-not-allowed"
+                        >
+                        <span class="text-slate-700 font-medium whitespace-nowrap">mcg/min</span>
+                    </div>
+                </div>
+
+                <p id="error-message" class="text-red-500 text-center mt-4 text-sm hidden"></p>
+
+                <p class="text-slate-500 text-center mt-6 text-sm">
+                    Enter decimal numbers (e.g., 0.2) or fractions (e.g., 2/10)
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-100 border-t border-slate-200 px-4 py-6">
+        <div class="max-w-3xl mx-auto">
+            <p class="text-xs text-slate-500 text-center leading-relaxed">
+                <strong class="text-slate-600">Disclaimer:</strong> This tool is provided for informational purposes only.
+                All calculations should be independently verified by a qualified healthcare professional before use.
+                The user assumes full responsibility for any medical decisions made based on the results provided by this tool.
+                The creators of MexDose are not liable for any errors, omissions, or adverse outcomes resulting from the use of this calculator.
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        function parseInput(value) {
+            if (!value || value.trim() === '') {
+                return null;
+            }
+
+            const trimmed = value.trim();
+
+            // Check if it's a fraction (e.g., "2/10")
+            if (trimmed.includes('/')) {
+                const parts = trimmed.split('/');
+                if (parts.length !== 2) {
+                    return NaN;
+                }
+                const numerator = parseFloat(parts[0]);
+                const denominator = parseFloat(parts[1]);
+                if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+                    return NaN;
+                }
+                return numerator / denominator;
+            }
+
+            // Otherwise, parse as a decimal
+            return parseFloat(trimmed);
+        }
+
+        function calculate() {
+            const concentrationInput = document.getElementById('concentration');
+            const rateInput = document.getElementById('rate');
+            const resultInput = document.getElementById('result');
+            const errorMessage = document.getElementById('error-message');
+
+            const concentration = parseInput(concentrationInput.value);
+            const rate = parseInput(rateInput.value);
+
+            // Clear error message
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = '';
+
+            // If either input is empty, clear result
+            if (concentration === null || rate === null) {
+                resultInput.value = '—';
+                return;
+            }
+
+            // Check for invalid inputs
+            if (isNaN(concentration)) {
+                errorMessage.textContent = 'Invalid concentration value';
+                errorMessage.classList.remove('hidden');
+                resultInput.value = '—';
+                return;
+            }
+
+            if (isNaN(rate)) {
+                errorMessage.textContent = 'Invalid rate value';
+                errorMessage.classList.remove('hidden');
+                resultInput.value = '—';
+                return;
+            }
+
+            // Check for negative values
+            if (concentration < 0 || rate < 0) {
+                errorMessage.textContent = 'Values must be positive';
+                errorMessage.classList.remove('hidden');
+                resultInput.value = '—';
+                return;
+            }
+
+            // Calculate: mcg/min = (mg/mL * mL/hr * 1000) / 60
+            // mg/mL * mL/hr = mg/hr
+            // mg/hr * 1000 = mcg/hr
+            // mcg/hr / 60 = mcg/min
+            const mcgPerMin = (concentration * rate * 1000) / 60;
+
+            // Format result (up to 4 decimal places, removing trailing zeros)
+            const formatted = mcgPerMin.toFixed(4).replace(/\.?0+$/, '');
+            resultInput.value = formatted;
+        }
+
+        // Add event listeners
+        document.getElementById('concentration').addEventListener('input', calculate);
+        document.getElementById('rate').addEventListener('input', calculate);
+    </script>
+</body>
+</html>
